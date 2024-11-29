@@ -4,17 +4,18 @@ from sklearn.model_selection import train_test_split
 import tensorflow as tf
 import pandas as pd
 from keras._tf_keras.keras.preprocessing.image import ImageDataGenerator
+import os
 
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, Dropout
-from tensorflow.keras.layers import Input
-
-from tensorflow.keras.applications import MobileNet
+from tensorflow.keras.applications import VGG16
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Dense, GlobalAveragePooling2D
 
 
 
+
+
+
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 ######################
 # Step 1: Getting the Data
 ######################
@@ -90,17 +91,18 @@ val_gen = datagen.flow_from_directory(
 print(f"Training batches: {len(train_gen)}")
 print(f"Validation batches: {len(val_gen)}")
 
+
 ######################
-# Step 4: Transfer Learning
+# Step 4: Using VGG16
 ######################
 
-# Load the MobileNet model without the top layer
-base_model = MobileNet(weights='imagenet', include_top=False, input_shape=(128, 128, 3))
+# Load the VGG16 model without the top layer
+base_model = VGG16(weights='imagenet', include_top=False, input_shape=(128, 128, 3))
 
-# Freeze the base model layers to use them as feature extractors
+# Freeze the base model layers
 base_model.trainable = False
 
-# Add custom classification layers
+# Add custom layers
 x = base_model.output
 x = GlobalAveragePooling2D()(x)  # Global pooling to reduce feature maps
 x = Dense(128, activation='relu')(x)  # Fully connected layer
@@ -112,14 +114,14 @@ model = Model(inputs=base_model.input, outputs=output)
 # Compile the model
 model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
 
-# Model summary
+# Summary of the model
 model.summary()
 
 # Train the model
 history = model.fit(
     train_gen,
     validation_data=val_gen,
-    epochs=5,  # Adjust epochs as needed
+    epochs=5,  # Adjust as needed
     verbose=1
 )
 
