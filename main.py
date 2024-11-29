@@ -25,7 +25,7 @@ RESET = "\033[0m"
 images = './Data_set/Images'
 annotation = './Data_set/Annotation'
  
-#did not end up using because we split our own data randomly. 
+#did not end up using because we split our own data randomly. just a note.. 
 file_list_path = './Data_set/list/file_list'
 train_list_path = './Data_set/list/train_list'
 test_list_path = './Data_set/list/test_list'
@@ -127,7 +127,7 @@ model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accur
 history = model.fit(
     train_gen,
     validation_data=val_gen,
-    epochs=5,  # Adjust epochs as needed
+    epochs=10,  # Adjust epochs as needed
     verbose=1
 )
 # Save the model in Keras native format
