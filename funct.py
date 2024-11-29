@@ -5,37 +5,6 @@ import os
 import numpy as np
 from keras._tf_keras.keras.preprocessing.image import load_img, img_to_array
 
-IMG_SIZE = (128, 128)  # Resize all images to 128x128
-
-def preprocess_images(data, images_dir):
-    """
-    Preprocesses a list of image file paths: loads, resizes, and normalizes them.
-
-    Parameters:
-    - data (list): List of dictionaries containing image paths and annotations.
-    - images_dir (str): Directory where image files are stored.
-
-    Returns:
-    - X (np.array): Array of preprocessed image data.
-    - y (list): List of class labels.
-    """
-    X = []
-    y = []
-
-    for item in data:
-        img_path = item['image'] if os.path.isabs(item['image']) else os.path.join(images_dir, item['image'])
-
-        label = item['annotation']['class_name']  # Assuming this is the label key
-
-        # Load and preprocess image
-        img = load_img(img_path, target_size=IMG_SIZE)
-        img_array = img_to_array(img) / 255.0  # Normalize to [0, 1]
-        X.append(img_array)
-        y.append(label)
-
-    return np.array(X), np.array(y)
-
-
 def parse_ann(file_path):
     """
     Parses an annotation file to extract bounding box and class label.

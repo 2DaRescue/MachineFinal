@@ -1,5 +1,5 @@
 import random
-from funct import pair_files, show_image, count_files, preprocess_images
+from funct import pair_files, show_image, count_files
 from sklearn.model_selection import train_test_split
 import tensorflow as tf
 import pandas as pd
@@ -8,6 +8,12 @@ from keras._tf_keras.keras.preprocessing.image import ImageDataGenerator
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, Dropout
 from tensorflow.keras.layers import Input
+
+from tensorflow.keras.applications import MobileNet
+from tensorflow.keras.models import Model
+from tensorflow.keras.layers import Dense, GlobalAveragePooling2D
+
+
 
 ######################
 # Step 1: Getting the Data
@@ -85,41 +91,39 @@ print(f"Training batches: {len(train_gen)}")
 print(f"Validation batches: {len(val_gen)}")
 
 ######################
-# Step 4: Model Building and Training
+# Step 4: Transfer Learning
 ######################
 
-# Define the model architecture
-model = Sequential([
-    Input(shape=(128, 128, 3)),
-    Conv2D(32, (3, 3), activation='relu'),
-    MaxPooling2D(pool_size=(2, 2)),
-    Conv2D(64, (3, 3), activation='relu'),
-    MaxPooling2D(pool_size=(2, 2)),
-    Flatten(),
-    Dense(128, activation='relu'),
-    Dropout(0.5),  # Regularization
-    Dense(train_gen.num_classes, activation='softmax')  # Output layer
-])
+# Load the MobileNet model without the top layer
+base_model = MobileNet(weights='imagenet', include_top=False, input_shape=(128, 128, 3))
+
+# Freeze the base model layers to use them as feature extractors
+base_model.trainable = False
+
+# Add custom classification layers
+x = base_model.output
+x = GlobalAveragePooling2D()(x)  # Global pooling to reduce feature maps
+x = Dense(128, activation='relu')(x)  # Fully connected layer
+output = Dense(train_gen.num_classes, activation='softmax')(x)  # Output layer
+
+# Create the model
+model = Model(inputs=base_model.input, outputs=output)
 
 # Compile the model
-model.compile(
-    optimizer='adam',
-    loss='categorical_crossentropy',  # Use 'binary_crossentropy' for 2 classes
-    metrics=['accuracy']
-)
+model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+
+# Model summary
+model.summary()
 
 # Train the model
 history = model.fit(
     train_gen,
     validation_data=val_gen,
-    epochs=10,              # Number of epochs to train
-    verbose=1               # Progress output during training
+    epochs=5,  # Adjust epochs as needed
+    verbose=1
 )
 
 # Evaluate the model
 val_loss, val_accuracy = model.evaluate(val_gen)
 print(f"Validation Loss: {val_loss}")
 print(f"Validation Accuracy: {val_accuracy}")
-
-# Save the model (optional)
-model.save('./model/dog_breed_classifier.keras')
