@@ -12,6 +12,13 @@ from tensorflow.keras.applications import MobileNet
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Dense, GlobalAveragePooling2D
 
+from tensorflow.keras.callbacks import EarlyStopping
+from tensorflow.keras.callbacks import LearningRateScheduler
+
+from joblib import dump
+
+from sklearn.model_selection import StratifiedShuffleSplit
+
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 GREEN = "\033[92m"
 BLUE = "\033[94m"
@@ -47,7 +54,12 @@ show_image(random_pair['image'], random_pair['annotation'])
 ######################   Splitting the Data     ###################### 
 ######################                          ######################
 
-train_data, test_data = train_test_split(data, test_size=0.2, random_state=42, shuffle=True)
+
+# Create stratified split
+split = StratifiedShuffleSplit(n_splits=1, test_size=0.2, random_state=42)
+for train_idx, test_idx in split.split(data, [os.path.basename(d['image']).split('_')[0] for d in data]):
+    train_data = [data[i] for i in train_idx]
+    test_data = [data[i] for i in test_idx]
 
 # Output summary
 print(f"{BLUE}\n Spliting the data \n Training set size: {len(train_data)}")
@@ -73,23 +85,29 @@ print(f"Test set size: {len(test_data)} \n")
 
 # Initialize ImageDataGenerator with normalization
 datagen = ImageDataGenerator(
-    rescale=1.0 / 255.0,  # Normalize pixel values to [0, 1]
-    validation_split=0.2  # Split 80% training, 20% validation
+    rescale=1.0 / 255.0,
+    rotation_range=30,        # Rotate images up to 30 degrees
+    width_shift_range=0.2,    # Shift images horizontally
+    height_shift_range=0.2,   # Shift images vertically
+    shear_range=0.2,          # Apply shearing
+    zoom_range=0.2,           # Zoom in/out
+    brightness_range=(0.8, 1.2),  # Adjust brightness
+    horizontal_flip=True,     # Flip images horizontally
+    validation_split=0.2      # 20% validation split
 )
 
-# Prepare training data generator
 train_gen = datagen.flow_from_directory(
     directory=images,
-    target_size=(128, 128),    # Resize all images to 128x128
-    batch_size=32,             # Process images in batches of 32
-    class_mode='categorical',  # Use 'categorical' for multi-class classification
-    subset='training'          # Specify this is the training split
+    target_size=(224, 224),  # Increased resolution
+    batch_size=64,  # Increased batch size
+    class_mode='categorical',
+    subset='training'
 )
 
 # Prepare validation data generator
 val_gen = datagen.flow_from_directory(
     directory=images,
-    target_size=(128, 128),
+    target_size=(224, 224),
     batch_size=32,
     class_mode='categorical',
     subset='validation'        # Specify this is the validation split
@@ -105,7 +123,7 @@ print(f"Validation batches: {len(val_gen)}")
 ######################
 ## mobile net is a CNN 
 # Load the MobileNet model without the top layer
-base_model = MobileNet(weights='imagenet', include_top=False, input_shape=(128, 128, 3))
+base_model = MobileNet(weights='imagenet', include_top=False, input_shape=(224, 224, 3))
 
 # Freeze the base model layers to use them as feature extractors
 base_model.trainable = False
@@ -123,15 +141,33 @@ model = Model(inputs=base_model.input, outputs=output)
 model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
 
 
-# Train the model
+
+def scheduler(epoch, lr):
+    return float(lr * tf.math.exp(-0.1))  # Ensures output is a float
+    
+
+
+early_stopping = EarlyStopping(
+    monitor='val_loss',
+    patience=3,  # Stop training if no improvement after 3 epochs
+    restore_best_weights=True
+)
+
+lr_scheduler = LearningRateScheduler(scheduler)
+
+# Add it to the model training step
 history = model.fit(
     train_gen,
     validation_data=val_gen,
-    epochs=10,  # Adjust epochs as needed
+    epochs=10,
+    callbacks=[lr_scheduler,early_stopping],  # Add scheduler here
     verbose=1
 )
-# Save the model in Keras native format
-model.save('mobilenet_dog_breeds.keras')
+
+
+# Save the model using joblib
+dump(model, 'mobilenet_dog_breeds.joblib')
+print("Model saved successfully as 'mobilenet_dog_breeds.joblib'")
 
 print("Model saved successfully!")
 

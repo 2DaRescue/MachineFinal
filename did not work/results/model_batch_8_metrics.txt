@@ -1,0 +1,5 @@
+Metrics for model_batch_8.keras:
+  Accuracy: 0.0108
+  Precision: 0.0008
+  Recall: 0.0108
+  F1 Score: 0.0014

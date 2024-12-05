@@ -1,0 +1,5 @@
+Metrics for model_batch_3.keras:
+  Accuracy: 0.0054
+  Precision: 0.0004
+  Recall: 0.0054
+  F1 Score: 0.0007

@@ -1,0 +1,5 @@
+Metrics for model_batch_9.keras:
+  Accuracy: 0.0022
+  Precision: 0.0003
+  Recall: 0.0022
+  F1 Score: 0.0005
