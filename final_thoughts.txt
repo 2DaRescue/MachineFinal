@@ -1,0 +1,18 @@
+
+
+there were somthinggs that we could not include into our presentation due to time contraits. 
+somthings that we tried but did not work. 
+	
+multi-batch learning and combining models. First, we tried implementing multi-batch learning, 
+where each batch was trained on a subset of dog breeds using different models.
+12 models with each model focused on 10 breeds. While the individual 
+models trained successfully, combining them into a  ensemble model was hard.. 
+
+in both technique we found that the accuracy would be .0001. 
+something would go teribly wrong and we cound not overcome this
+
+this was a huge effort and one of the hardent assignemnts in our college carreer 
+
+we have more files on a git hub account that contains all the models that were failues. from 5% to 60% to our current model at 77ish%
+
+this is somthing that we are willing to continue work on every now and then as a personal project. 
