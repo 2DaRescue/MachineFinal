@@ -1,8 +1,12 @@
 
+we observed that some of our missclassification of the dog breed was because of the differnet kind of breeds 
+under the same umbrela.. for example
+    multiple different kind of terreiers. scottiish terrier and norweigian terriers.
+because of this i think our accuracy is lower that is should be. The terrier is just one example. there are multple breeds
+that have different variations and this will be somthing to explore at a later date. 
 
 there were somthinggs that we could not include into our presentation due to time contraits. 
-somthings that we tried but did not work. 
-	
+somthings that we tried but did not work. 	
 multi-batch learning and combining models. First, we tried implementing multi-batch learning, 
 where each batch was trained on a subset of dog breeds using different models.
 12 models with each model focused on 10 breeds. While the individual 
