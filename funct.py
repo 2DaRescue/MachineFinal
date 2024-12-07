@@ -5,16 +5,10 @@ import os
 import numpy as np
 from keras._tf_keras.keras.preprocessing.image import load_img, img_to_array
 
+
+## all this doese is parse the annotation file i got from the database that adds a red box around the dog 
 def parse_ann(file_path):
-    """
-    Parses an annotation file to extract bounding box and class label.
-
-    Parameters:
-    - file_path (str): Path to the annotation file.
-
-    Returns:
-    - dict: Contains 'class_name' and 'bbox' (bounding box coordinates).
-    """
+    
     tree = ET.parse(file_path)
     root = tree.getroot()
 
@@ -27,22 +21,13 @@ def parse_ann(file_path):
 
     return {'class_name': class_name, 'bbox': (xmin, ymin, xmax, ymax)}
 
-
+# thiss parits the annotation with the CORRECT image so that box perfectly overlaps the dog in the image
+# coll stufff
 def pair_files(images, annotation, file_list=None):
-    """
-    Pairs images and annotations. If a file_list is provided, pair based on the list.
-
-    Parameters:
-    - images (str): Path to the images folder.
-    - annotation (str): Path to the annotation folder.
-    - file_list (list, optional): List of file paths relative to the images folder.
-
-    Returns:
-    - list: A list of paired image and annotation data.
-    """
+   
     pairs = []
     if file_list:
-        # Pair using file_list
+       
         for file in file_list:
             img_path = os.path.join(images, file)
             ann_path = os.path.join(annotation, os.path.splitext(file)[0])
@@ -63,28 +48,14 @@ def pair_files(images, annotation, file_list=None):
                     pairs.append({'image': img_path, 'annotation': ann_data})
     return pairs
 
-
+# this retruns the number of nested files/images in the image directory)
 def count_files(folder):
-    """
-    Counts the number of files in a folder (recursively).
-
-    Parameters:
-    - folder (str): Path to the folder.
-
-    Returns:
-    - int: Total number of files.
-    """
+   
     return sum(len(files) for _, _, files in os.walk(folder))
 
-
+# shows the pair of dog+ red box. in one image. 
 def show_image(img_path, ann):
-    """
-    Displays an image with its annotation (bounding box and class label).
-
-    Parameters:
-    - img_path (str): Path to the image file.
-    - ann (dict): Dictionary containing 'class_name' and 'bbox'.
-    """
+    
     img = Image.open(img_path)
     draw = ImageDraw.Draw(img)
 

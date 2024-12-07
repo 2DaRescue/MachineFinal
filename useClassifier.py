@@ -1,123 +1,140 @@
+
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-from sklearn.metrics import classification_report, confusion_matrix
-from tensorflow.keras.preprocessing.image import ImageDataGenerator
+from sklearn.metrics import classification_report, confusion_matrix, precision_recall_curve, roc_curve, auc
+from tensorflow.keras.preprocessing.image import ImageDataGenerator, load_img, img_to_array
 from joblib import load
 import os
+import random
+from sklearn.preprocessing import label_binarize
 
-# Load the saved model
-model_path = 'mobilenet_dog_breeds.joblib'  # Path to your saved model
+# no nonsenes warnings
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+
+
+# Load 
+model_path = 'mobilenet_dog_breeds_Tuned.joblib'  # Path to the saved model
 model = load(model_path)
-print(f"Model loaded successfully from {model_path}")
+print("Model loaded")
 
-# Prepare the data generator for the existing dataset
+# Prepare the data generator for preprocessing and validation data
+#nomilize the photo and also more splitting for validation. 
+# small augments
 datagen = ImageDataGenerator(
-    rescale=1.0 / 255.0,
-    validation_split=0.2  # Assume we split the existing data into train/validation
+    rescale=1.0 / 255.0,  
+    validation_split=0.2  
 )
 
-# Directory containing dataset
-dataset_dir = './Data_set/Images'  # Update with the correct path
+# Directory containing the dataset
+dataset = './Data_set/Images'  
+metrics_dir = './METRICS'
+# Creates a data generator for the validation subset of the dataset. 
+# resizes images to 224x224 s
+# processes them in batches of 32 images.
+# cool stufff
 
-# Create test data generator
 test_gen = datagen.flow_from_directory(
-    directory=dataset_dir,
-    target_size=(224, 224),  # Match model input size
-    batch_size=32,
-    class_mode='categorical',
-    subset='validation',
-    shuffle=False  # Disable shuffle to maintain consistent results
+    directory=dataset,
+    target_size=(224, 224),  # Resize images to match model input size
+    batch_size=32,  # Process data in batches of 32
+    class_mode='categorical',  # Use categorical labels for multi-class classification
+    subset='validation',  # Use validation split of the data
+    shuffle=False  # Keep order consistent for reproducible results
 )
 
-# Evaluate the model on the test dataset
-def evaluate_model():
-    test_loss, test_accuracy = model.evaluate(test_gen)
-    print(f"Test Loss: {test_loss}")
-    print(f"Test Accuracy: {test_accuracy}")
+# Evaluate the model
+print("\nEvaluating the model...")
+test_loss, test_accuracy = model.evaluate(test_gen)
+print(f"Test Loss: {test_loss}")
+print(f"Test Accuracy: {test_accuracy}")
 
-# Generate a classification report
-def generate_classification_report():
-    # Predict on all test images
-    predictions = model.predict(test_gen)
-    predicted_classes = np.argmax(predictions, axis=1)  # Get class indices
-    true_classes = test_gen.classes  # True class labels
-    class_labels = list(test_gen.class_indices.keys())  # Class names
+# Generate predictions and create a classification report
+# Predict labels for all validation data true vs predicted stuff.
 
-    # Generate classification report
-    print("\nClassification Report:")
-    report = classification_report(true_classes, predicted_classes, target_names=class_labels)
-    print(report)
+print("\nGenerating classification report...")
+predictions = model.predict(test_gen) 
+predicted_classes = np.argmax(predictions, axis=1)  
+true_classes = test_gen.classes  
+class_labels = list(test_gen.class_indices.keys())  
 
-# Generate a confusion matrix
-def plot_confusion_matrix_simplified():
-    # Predict on all test images
-    predictions = model.predict(test_gen)
-    predicted_classes = np.argmax(predictions, axis=1)
-    true_classes = test_gen.classes
+# Print classification report
+print("\nClassification Report:")
+report = classification_report(true_classes, predicted_classes, target_names=class_labels)
+print(report)
 
-    # Generate confusion matrix
-    cm = confusion_matrix(true_classes, predicted_classes)
-    plt.figure(figsize=(10, 8))
-    sns.heatmap(cm, annot=False, fmt='d', cmap='Blues', cbar=True)
-    plt.title("Simplified Confusion Matrix")
-    plt.xlabel("Predicted Class")
-    plt.ylabel("True Class")
+with open(os.path.join(metrics_dir, "classification_report.txt"), 'w') as f:
+    f.write(report)
+
+# Generate and plot the confusion matrix
+# rather ungl
+print("\nPlotting confusion matrix...")
+cm = confusion_matrix(true_classes, predicted_classes) 
+plt.figure(figsize=(10, 8))
+sns.heatmap(cm, annot=False, fmt='d', cmap='Blues', cbar=True)  
+plt.title("Confusion Matrix")
+plt.xlabel("Predicted Class")
+plt.ylabel("True Class")
+plt.show()
+
+# Visualize random predictions from the test dataset
+print("\n 10 random predictions...")
+filenames = test_gen.filenames  # List of filenames in the test dataset
+true_labels = test_gen.classes  # True labels corresponding to the filenames
+
+# Select random images to visualize predictions
+# Choose 10 random images
+# Add batch dimension for prediction
+random_indices = random.sample(range(len(filenames)), 10)  
+for idx in random_indices:
+    img_path = os.path.join(test_gen.directory, filenames[idx])  
+    img = load_img(img_path, target_size=(224, 224))  
+    img_array = img_to_array(img) / 255.0  
+    img_array = np.expand_dims(img_array, axis=0)  
+
+# Predicted class name and True class name
+    prediction = model.predict(img_array)  
+    predicted_class_idx = np.argmax(prediction)  
+    predicted_label = class_labels[predicted_class_idx]  
+    true_label = class_labels[true_labels[idx]]  
+
+    # show pups
+    plt.imshow(img)
+    plt.title(f"True: {true_label} | Predicted: {predicted_label}")
+    plt.axis('off')
     plt.show()
+    
 
-# Visualize predictions on a batch
-def visualize_predictions():
-    batch_images, batch_labels = next(test_gen)
-    batch_predictions = model.predict(batch_images)
-    predicted_classes = np.argmax(batch_predictions, axis=1)
 
-    for i in range(5):  # Visualize first 5 images in the batch
-        plt.imshow(batch_images[i])
-        true_label = list(test_gen.class_indices.keys())[np.argmax(batch_labels[i])]
-        predicted_label = list(test_gen.class_indices.keys())[predicted_classes[i]]
-        plt.title(f"True: {true_label} | Pred: {predicted_label}")
-        plt.axis('off')
-        plt.show()
+# Precision-Recall Curve
+print("\nPrecision-Recall Curve")
+y_true_bin = label_binarize(true_classes, classes=range(len(class_labels)))
+y_pred_bin = label_binarize(predicted_classes, classes=range(len(class_labels)))
 
-# Plot training and validation metrics
-def plot_metrics(history_path='training_history.npy'):
-    # Load history file if available
-    if os.path.exists(history_path):
-        history = np.load(history_path, allow_pickle=True).item()
-        # Plot loss
-        plt.figure(figsize=(10, 5))
-        plt.plot(history['loss'], label='Training Loss')
-        plt.plot(history['val_loss'], label='Validation Loss')
-        plt.title("Loss Over Epochs")
-        plt.xlabel("Epochs")
-        plt.ylabel("Loss")
-        plt.legend()
-        plt.show()
+# Plot Precision-Recall curve for each class
+for i in range(len(class_labels)):
+    precision, recall, _ = precision_recall_curve(y_true_bin[:, i], y_pred_bin[:, i])
+    plt.plot(recall, precision, label=f'Class {class_labels[i]}')
 
-        # Plot accuracy
-        plt.figure(figsize=(10, 5))
-        plt.plot(history['accuracy'], label='Training Accuracy')
-        plt.plot(history['val_accuracy'], label='Validation Accuracy')
-        plt.title("Accuracy Over Epochs")
-        plt.xlabel("Epochs")
-        plt.ylabel("Accuracy")
-        plt.legend()
-        plt.show()
-    else:
-        print("Training history file not found.")
+plt.title('Precision-Recall Curve')
+plt.xlabel('Recall')
+plt.ylabel('Precision')
+plt.savefig(os.path.join(metrics_dir, 'precision_recall_curve.png'))
+plt.show()
 
-if __name__ == '__main__':
-    print("Evaluating the model...")
-    evaluate_model()
+# ROC Curve and AUC
+print("\n ROC Curve")
+fpr, tpr, _ = roc_curve(y_true_bin.ravel(), y_pred_bin.ravel())
+roc_auc = auc(fpr, tpr)
 
-    print("\nGenerating classification report...")
-    generate_classification_report()
+plt.figure(figsize=(10, 8))
+plt.plot(fpr, tpr, color='darkorange', lw=2, label=f'ROC curve (AUC = {roc_auc:.2f})')
+plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
+plt.xlabel('False Positive Rate')
+plt.ylabel('True Positive Rate')
+plt.title('Receiver Operating Characteristic (ROC) Curve')
+plt.legend(loc='lower right')
+plt.show()
+plt.savefig(os.path.join(metrics_dir, 'roc_curve.png'))
 
-    print("\nPlotting confusion matrix...")
-    plot_confusion_matrix_simplified()
 
-    print("\nVisualizing predictions...")
-    visualize_predictions()
-
-    print("\nPlotting training metrics...")
-    plot_metrics()
